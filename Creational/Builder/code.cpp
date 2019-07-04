@@ -1,170 +1,129 @@
-// sy: From https://sourcemaking.com/design_patterns/builder/cpp/1
+// sy: https://en.wikibooks.org/wiki/C%2B%2B_Programming/Code/Design_Patterns#Bridge
 
-#include <iostream>
-#include <stdio.h>
+
 #include <string>
-
+#include <iostream>
+#include <memory>
 using namespace std;
 
-enum PersistenceType
+// "Product"
+class Pizza
 {
-  File, Queue, Pathway
+public:
+	void setDough(const string& dough)
+	{
+		m_dough = dough;
+	}
+	void setSauce(const string& sauce)
+	{
+		m_sauce = sauce;
+	}
+	void setTopping(const string& topping)
+	{
+		m_topping = topping;
+	}
+	void open() const
+	{
+		cout << "Pizza with " << m_dough << " dough, " << m_sauce << " sauce and "
+			<< m_topping << " topping. Mmm." << endl;
+	}
+private:
+	string m_dough;
+	string m_sauce;
+	string m_topping;
 };
 
-struct PersistenceAttribute
+// "Abstract Builder"
+class PizzaBuilder
 {
-  PersistenceType type;
-  char value[30];
+public:
+	virtual ~PizzaBuilder() {};
+
+	Pizza* getPizza()
+	{
+		return m_pizza.release();
+	}
+	void createNewPizzaProduct()
+	{
+		m_pizza = make_unique<Pizza>();
+	}
+	virtual void buildDough() = 0;
+	virtual void buildSauce() = 0;
+	virtual void buildTopping() = 0;
+protected:
+	unique_ptr<Pizza> m_pizza;
 };
 
-class DistrWorkPackage
+//----------------------------------------------------------------
+
+class HawaiianPizzaBuilder : public PizzaBuilder
 {
-  public:
-    DistrWorkPackage(char *type)
-    {
-        sprintf(_desc, "Distributed Work Package for: %s", type);
-    }
-    void setFile(char *f, char *v)
-    {
-        sprintf(_temp, "\n  File(%s): %s", f, v);
-        strcat(_desc, _temp);
-    }
-    void setQueue(char *q, char *v)
-    {
-        sprintf(_temp, "\n  Queue(%s): %s", q, v);
-        strcat(_desc, _temp);
-    }
-    void setPathway(char *p, char *v)
-    {
-        sprintf(_temp, "\n  Pathway(%s): %s", p, v);
-        strcat(_desc, _temp);
-    }
-    const char *getState()
-    {
-        return _desc;
-    }
-  private:
-    char _desc[200], _temp[80];
+public:
+	virtual ~HawaiianPizzaBuilder() {};
+
+	virtual void buildDough()
+	{
+		m_pizza->setDough("cross");
+	}
+	virtual void buildSauce()
+	{
+		m_pizza->setSauce("mild");
+	}
+	virtual void buildTopping()
+	{
+		m_pizza->setTopping("ham+pineapple");
+	}
 };
 
-class Builder
+class SpicyPizzaBuilder : public PizzaBuilder
 {
-  public:
-    virtual void configureFile(char*) = 0;
-    virtual void configureQueue(char*) = 0;
-    virtual void configurePathway(char*) = 0;
-    DistrWorkPackage *getResult()
-    {
-        return _result;
-    }
-  protected:
-    DistrWorkPackage *_result;
+public:
+	virtual ~SpicyPizzaBuilder() {};
+
+	virtual void buildDough()
+	{
+		m_pizza->setDough("pan baked");
+	}
+	virtual void buildSauce()
+	{
+		m_pizza->setSauce("hot");
+	}
+	virtual void buildTopping()
+	{
+		m_pizza->setTopping("pepperoni+salami");
+	}
 };
 
-class UnixBuilder: public Builder
-{
-  public:
-    UnixBuilder()
-    {
-        _result = new DistrWorkPackage("Unix");
-    }
-    void configureFile(char *name)
-    {
-        _result->setFile("flatFile", name);
-    }
-    void configureQueue(char *queue)
-    {
-        _result->setQueue("FIFO", queue);
-    }
-    void configurePathway(char *type)
-    {
-        _result->setPathway("thread", type);
-    }
-};
+//----------------------------------------------------------------
 
-class VmsBuilder: public Builder
+class Cook
 {
-  public:
-    VmsBuilder()
-    {
-        _result = new DistrWorkPackage("Vms");
-    }
-    void configureFile(char *name)
-    {
-        _result->setFile("ISAM", name);
-    }
-    void configureQueue(char *queue)
-    {
-        _result->setQueue("priority", queue);
-    }
-    void configurePathway(char *type)
-    {
-        _result->setPathway("LWP", type);
-    }
-};
-
-class Reader
-{
-  public:
-    void setBuilder(Builder *b)
-    {
-        _builder = b;
-    }
-    void construct(PersistenceAttribute[], int);
-  private:
-    Builder *_builder;
-};
-
-void Reader::construct(PersistenceAttribute list[], int num)
-{
-  for (int i = 0; i < num; i++)
-    if (list[i].type == File)
-      _builder->configureFile(list[i].value);
-    else if (list[i].type == Queue)
-      _builder->configureQueue(list[i].value);
-    else if (list[i].type == Pathway)
-      _builder->configurePathway(list[i].value);
-}
-
-const int NUM_ENTRIES = 6;
-PersistenceAttribute input[NUM_ENTRIES] = 
-{
-  {
-    File, "state.dat"
-  }
-  , 
-  {
-    File, "config.sys"
-  }
-  , 
-  {
-    Queue, "compute"
-  }
-  , 
-  {
-    Queue, "log"
-  }
-  , 
-  {
-    Pathway, "authentication"
-  }
-  , 
-  {
-    Pathway, "error processing"
-  }
+public:
+	void openPizza()
+	{
+		m_pizzaBuilder->getPizza()->open();
+	}
+	void makePizza(PizzaBuilder* pb)
+	{
+		m_pizzaBuilder = pb;
+		m_pizzaBuilder->createNewPizzaProduct();
+		m_pizzaBuilder->buildDough();
+		m_pizzaBuilder->buildSauce();
+		m_pizzaBuilder->buildTopping();
+	}
+private:
+	PizzaBuilder* m_pizzaBuilder;
 };
 
 int main()
 {
-  UnixBuilder unixBuilder;
-  VmsBuilder vmsBuilder;
-  Reader reader;
+	Cook cook;
+	HawaiianPizzaBuilder hawaiianPizzaBuilder;
+	SpicyPizzaBuilder    spicyPizzaBuilder;
 
-  reader.setBuilder(&unixBuilder);
-  reader.construct(input, NUM_ENTRIES);
-  cout << unixBuilder.getResult()->getState() << endl;
+	cook.makePizza(&hawaiianPizzaBuilder);
+	cook.openPizza();
 
-  reader.setBuilder(&vmsBuilder);
-  reader.construct(input, NUM_ENTRIES);
-  cout << vmsBuilder.getResult()->getState() << endl;
+	cook.makePizza(&spicyPizzaBuilder);
+	cook.openPizza();
 }

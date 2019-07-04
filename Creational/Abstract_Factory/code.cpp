@@ -1,85 +1,66 @@
-// sy: From https://sourcemaking.com/design_patterns/abstract_factory/cpp/2
+// sy: https://en.wikibooks.org/wiki/C%2B%2B_Programming/Code/Design_Patterns#Abstract_Factory
 
-
+#include <stdexcept>
 #include <iostream>
-
+#include <memory>
 using namespace std;
 
-class Shape {
-  public:
-    Shape() {
-      id_ = total_++;
-    }
-    virtual void draw() = 0;
-  protected:
-    int id_;
-    static int total_;
-};
-int Shape::total_ = 0;
-
-class Circle : public Shape {
-  public:
-    void draw() {
-      cout << "circle " << id_ << ": draw" << endl;
-    }
-};
-class Square : public Shape {
-  public:
-    void draw() {
-      cout << "square " << id_ << ": draw" << endl;
-    }
-};
-class Ellipse : public Shape {
-  public:
-    void draw() {
-      cout << "ellipse " << id_ << ": draw" << endl;
-    }
-};
-class Rectangle : public Shape {
-  public:
-    void draw() {
-      cout << "rectangle " << id_ << ": draw" << endl;
-    }
+class Pizza {
+public:
+	virtual int getPrice() const = 0;
+	virtual ~Pizza() {};  /* without this, no destructor for derived Pizza's will be called. */
 };
 
-class Factory {
-  public:
-    virtual Shape* createCurvedInstance() = 0;
-    virtual Shape* createStraightInstance() = 0;
+class HamAndMushroomPizza : public Pizza {
+public:
+	virtual int getPrice() const { return 850; };
+	virtual ~HamAndMushroomPizza() {};
 };
 
-class SimpleShapeFactory : public Factory {
-  public:
-    Shape* createCurvedInstance() {
-      return new Circle;
-    }
-    Shape* createStraightInstance() {
-      return new Square;
-    }
-};
-class RobustShapeFactory : public Factory {
-  public:
-    Shape* createCurvedInstance()   {
-      return new Ellipse;
-    }
-    Shape* createStraightInstance() {
-      return new Rectangle;
-    }
+class DeluxePizza : public Pizza {
+public:
+	virtual int getPrice() const { return 1050; };
+	virtual ~DeluxePizza() {};
 };
 
-int main() {
-#ifdef SIMPLE
-  Factory* factory = new SimpleShapeFactory;
-#elif ROBUST
-  Factory* factory = new RobustShapeFactory;
-#endif
-  Shape* shapes[3];
+class HawaiianPizza : public Pizza {
+public:
+	virtual int getPrice() const { return 1150; };
+	virtual ~HawaiianPizza() {};
+};
 
-  shapes[0] = factory->createCurvedInstance();   // shapes[0] = new Ellipse;
-  shapes[1] = factory->createStraightInstance(); // shapes[1] = new Rectangle;
-  shapes[2] = factory->createCurvedInstance();   // shapes[2] = new Ellipse;
+class PizzaFactory {
+public:
+	enum PizzaType {
+		HamMushroom,
+		Deluxe,
+		Hawaiian
+	};
 
-  for (int i=0; i < 3; i++) {
-    shapes[i]->draw();
-  }
+	static unique_ptr<Pizza> createPizza(PizzaType pizzaType) {
+		switch (pizzaType) {
+		case HamMushroom: return make_unique<HamAndMushroomPizza>();
+		case Deluxe:      return make_unique<DeluxePizza>();
+		case Hawaiian:    return make_unique<HawaiianPizza>();
+		}
+		throw "invalid pizza type.";
+	}
+};
+
+/*
+* Create all available pizzas and print their prices
+*/
+void pizza_information(PizzaFactory::PizzaType pizzatype)
+{
+	unique_ptr<Pizza> pizza = PizzaFactory::createPizza(pizzatype);
+	cout << "Price of " << pizzatype << " is " << pizza->getPrice() << std::endl;
 }
+
+int main()
+{
+	pizza_information(PizzaFactory::HamMushroom);
+	pizza_information(PizzaFactory::Deluxe);
+	pizza_information(PizzaFactory::Hawaiian);
+}
+
+
